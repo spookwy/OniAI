@@ -1,0 +1,15 @@
+    /* Responsive: widen on smaller screens and reduce bottom lift */
+    @media (max-width: 1200px){
+      .chat-shell{ left:24px; right:24px; transform:none; grid-template-columns: 260px 1fr; }
+    }
+    @media (max-width: 900px){
+      .chat-shell{ left:16px; right:16px; grid-template-columns: 1fr; }
+      .chat-history{ display:none; }
+    }
+
+    /* Specific layout tweak for 1920x1080: raise the initial chat form by 100px */
+    @media (max-width: 1920px) and (max-height: 1080px){
+      .chat-form { 
+        margin-bottom: 100px; 
+        }
+    }

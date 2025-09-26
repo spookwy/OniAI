@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OniAI — From the Future</title>
+  <meta name="description" content="OniAI — a futuristic AI experience. Dark, glassy, deep, with 3D abstractions responding to your mouse." />
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="responsive.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="nav" role="navigation" aria-label="Main">
+    <div class="brand"><div class="logo" aria-hidden="true"></div><div class="name"><span class="oni">Oni</span><span class="ai">AI</span></div></div>
+    <button class="login" id="loginBtn" aria-haspopup="dialog" aria-controls="introOverlay">Login</button>
+  </div>
+
+  <!-- Dynamic canvases -->
+  <canvas id="digits" aria-hidden="true"></canvas>
+
+  <!-- Hero -->
+  <main class="hero">
+    <div class="title-wrap">
+  <svg id="title" class="title-float" viewBox="0 0 1200 360" role="img" aria-labelledby="titleLabel">
+  <title id="titleLabel">OniAI Outline Title</title>
+        <defs>
+          <linearGradient id="strokeGrad" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stop-color="#8B5CF6"/>
+            <stop offset="100%" stop-color="#b69cff"/>
+          </linearGradient>
+        </defs>
+  <text id="titleText" x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-size="200" font-weight="900" stroke="url(#strokeGrad)" stroke-width="3" fill="transparent" style="letter-spacing:.08em;">OniAI</text>
+      </svg>
+    </div>
+
+    <!-- Frosted-glass chat input UI (design only) -->
+    <div class="chat-wrap" aria-label="Start chat">
+      <div class="chat-form" role="group" aria-label="Message input">
+        <input class="chat-input" id="chatInput" placeholder="Type your message..." maxlength="500" />
+        <button class="chat-send" id="chatSend" aria-label="Send message">Send</button>
+      </div>
+    </div>
+
+    <!-- Chat shell: history (left) + chat panel (right) -->
+    <section class="chat-shell" id="chatShell" aria-label="Chat area">
+      <aside class="chat-history" aria-label="Chat history">
+        <div class="history-head">History</div>
+        <div class="history-list" id="historyList" role="listbox" aria-label="Previous conversations"></div>
+      </aside>
+      <section class="chat-panel" id="chatPanel" aria-label="Chat" aria-live="polite">
+        <header class="chat-header">
+          <div>
+            <div class="chat-title">Chat</div>
+            <div class="chat-sub" id="chatSub">You are chatting with OniAI</div>
+          </div>
+          <div class="chat-actions">
+            <button class="chat-new" id="chatNew" aria-label="Start a new chat">New Chat</button>
+          </div>
+        </header>
+        <div class="chat-body" id="chatBody" tabindex="0" aria-label="Messages"></div>
+        <footer class="chat-footer">
+          <input class="chat-input" id="chatMainInput" placeholder="Write a message..." maxlength="2000" />
+          <button class="chat-send" id="chatMainSend" aria-label="Send message">Send</button>
+        </footer>
+      </section>
+    </section>
+
+    <section class="stack" aria-label="Highlights">
+      <article class="card">
+        <h3>Quantum-Grade Reasoning</h3>
+        <p>Inference pipelines tuned for multi‑step logic and multimodal understanding. Faster, sharper, more reliable.</p>
+      </article>
+      <article class="card">
+        <h3>Neural Glass UX</h3>
+        <p>Dark gradients, soft bloom, and depth cues deliver a sense of presence—more like a cockpit than a webpage.</p>
+      </article>
+      <article class="card">
+        <h3>Trusted by Builders</h3>
+        <p>From indie creators to enterprise labs, OniAI empowers people who need results—not buzzwords.</p>
+      </article>
+    </section>
+  </main>
+
+  <!-- Futuristic badges -->
+  <div class="badges" aria-hidden="true">
+    <div class="badge">HYPERPARALLEL</div>
+    <div class="badge">SELF-HEALING</div>
+    <div class="badge">ZERO-LATENCY*</div>
+  </div>
+
+  <!-- Intro / login overlay (runs after pressing Login) -->
+  <div class="overlay" id="introOverlay" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+    <div class="intro" aria-live="polite">
+      <div class="hi" id="hiText">Hi.</div>
+      <div class="ask" id="askText">Enter your nickname</div>
+      <div class="form" id="formWrap">
+        <div class="glass-form">
+          <input class="glass-input" id="nick" placeholder="Your nickname" maxlength="24" />
+          <button class="glass-btn" id="submitNick">Continue</button>
+        </div>
+      </div>
+      <span id="introTitle" class="sr-only">Login sequence</span>
+    </div>
+  </div>
+</body>
+</html>
