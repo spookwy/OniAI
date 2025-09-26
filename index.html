@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="responsive.css">
   <script src="script.js" defer></script>
+  <script type="module" src="supabase-auth.js"></script>
 </head>
 <body>
   <div class="nav" role="navigation" aria-label="Main">
@@ -97,6 +98,9 @@
         <div class="glass-form">
           <input class="glass-input" id="nick" placeholder="Your nickname" maxlength="24" />
           <button class="glass-btn" id="submitNick">Continue</button>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:10px; justify-content:center;">
+          <button class="glass-btn" id="oauthGoogle" type="button" aria-label="Sign in with Google">Sign in with Google</button>
         </div>
       </div>
       <span id="introTitle" class="sr-only">Login sequence</span>
