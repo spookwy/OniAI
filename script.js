@@ -381,6 +381,16 @@
       }
       return "Я обработал твоё сообщение. Могу предложить план из 3–5 шагов или пример кода — скажи, что предпочтительнее?";
     }
+    // Build recent history for model consumption
+    function buildModelHistory(maxMsgs = 12){
+      const chat = chats.find(c=>c.id===activeId);
+      if(!chat || !Array.isArray(chat.messages)) return [];
+      const convert = (r)=> r==='ai' ? 'assistant' : (r==='user' ? 'user' : r||'user');
+      // Use the last N messages to keep prompt small
+      const recent = chat.messages.slice(-maxMsgs);
+      return recent.map(m=>({ role: convert(m.role), content: String(m.text||'') }));
+    }
+
     async function replyAI(text){
       // 1) Try server free provider (Groq) via API (no login required; include token if present)
       try{
@@ -393,7 +403,7 @@
           }
         }catch{}
         const body = {
-          messages: [ { role:'user', content: text } ],
+          messages: buildModelHistory(12),
           temperature: window?.AI_BEHAVIOR?.temperature,
           max_tokens: window?.AI_BEHAVIOR?.maxTokens,
           systemPrompt: window?.AI_BEHAVIOR?.systemPrompt,
@@ -429,7 +439,7 @@
             setSub();
             live.textContent = '';
             const sys = window?.AI_BEHAVIOR?.systemPrompt || 'You are OniAI, a helpful AI assistant.';
-            const messages = [ { role:'system', content: sys }, { role:'user', content: text } ];
+            const messages = [ { role:'system', content: sys }, ...buildModelHistory(16) ];
             const full = await window.webllm.complete(messages, (delta)=>{
               live.textContent += delta;
               chatBody.scrollTop = chatBody.scrollHeight;
