@@ -181,6 +181,8 @@
    * -----------------------------------------------------*/
   (function Chat(){
     const $ = s=>document.querySelector(s);
+    // Base URL for API (set to your Render Web Service)
+    const API_BASE = window.API_BASE || 'https://oniai-api.onrender.com';
     const titleWrap = document.querySelector('.title-wrap');
     const mini = document.querySelector('.chat-wrap');
     const chatShell = $('#chatShell');
@@ -198,16 +200,42 @@
     let nameRef = 'Guest';
     try{ nameRef = window.userName || 'Guest'; }catch{ nameRef='Guest'; }
 
-    function setSub(){ chatSub.textContent = `You: ${nameRef} • AI: OniAI`; }
+    function setSub(){
+      const webllmOn = (typeof navigator !== 'undefined' && 'gpu' in navigator) && !!window.webllm;
+      chatSub.textContent = `You: ${nameRef} • AI: OniAI${webllmOn? ' (WebLLM)':''}`;
+    }
     setSub();
 
     // Basic localStorage-backed history
     const storeKey = 'oni_chats_v1';
     let chats = [];
     let activeId = null;
-    function loadChats(){
+    async function loadChats(){
       try{ chats = JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ chats=[]; }
       if(!Array.isArray(chats)) chats=[];
+      // Prune duplicates: if many empty local chats exist, keep only the first
+      if (chats.length > 1) {
+        const allEmpty = chats.every(c => !c?.messages || c.messages.length === 0);
+        if (allEmpty) {
+          chats = [chats[0]];
+          saveChats();
+        }
+      }
+      // If logged in, prefer server threads
+      try{
+        if(window.supabase){
+          const { data: sess } = await window.supabase.auth.getSession();
+          if(sess?.session){
+            const token = sess.session.access_token;
+            const res = await fetch(API_BASE + '/api/threads', { headers: { Authorization: 'Bearer '+token }});
+            if(res.ok){
+              const serverThreads = await res.json();
+              // Map to local shape
+              chats = serverThreads.map(t=>({ id: String(t.id), title: t.title, messages: [] }));
+            }
+          }
+        }
+      }catch{}
     }
     function saveChats(){ try{ localStorage.setItem(storeKey, JSON.stringify(chats)); }catch{}
     }
@@ -245,9 +273,15 @@
     }
     function ensureActive(){
       if(!activeId){
-        const id = genId();
-        chats.unshift({ id, title:'New chat', messages:[] });
-        activeId = id; saveChats(); renderHistory();
+        if (chats.length === 0) {
+          const id = genId();
+          chats.unshift({ id, title:'New chat', messages:[] });
+          activeId = id;
+        } else {
+          activeId = chats[0].id;
+        }
+        saveChats();
+        renderHistory();
       }
     }
     function selectChat(id){
@@ -258,7 +292,7 @@
       for(const m of chat.messages){ appendBubble(m.text, m.role); }
       mainInput.focus();
     }
-    function addMessageToActive(text, role){
+    async function addMessageToActive(text, role){
       const chat = chats.find(c=>c.id===activeId); if(!chat) return;
       chat.messages.push({ role, text, t: Date.now() });
       // Set title from first user message
@@ -268,6 +302,23 @@
         }
       }
       saveChats(); renderHistory();
+      // Try server persist if logged in
+      try{
+        if(window.supabase){
+          const { data: sess } = await window.supabase.auth.getSession();
+          if(sess?.session){
+            const token = sess.session.access_token;
+            // Ensure thread exists on server (create if only local)
+            if(!/^\d+$/.test(chat.id)){
+              const res = await fetch(API_BASE + '/api/threads', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization: 'Bearer '+token }, body: JSON.stringify({ title: chat.title||'New chat' })});
+              if(res.ok){ const t = await res.json(); chat.id = String(t.id); saveChats(); renderHistory(); }
+            }
+            if(/^\d+$/.test(chat.id)){
+              await fetch(`${API_BASE}/api/threads/${chat.id}/messages`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization: 'Bearer '+token }, body: JSON.stringify({ role, content: text })});
+            }
+          }
+        }
+      }catch{}
     }
     function deleteChat(id){
       const idx = chats.findIndex(c=>c.id===id);
@@ -330,12 +381,68 @@
       }
       return "Я обработал твоё сообщение. Могу предложить план из 3–5 шагов или пример кода — скажи, что предпочтительнее?";
     }
-    function replyAI(text){
+    async function replyAI(text){
+      // 1) Try server free provider (Groq) via API (no login required; include token if present)
+      try{
+        typing(true);
+        let headers = { 'Content-Type':'application/json' };
+        try{
+          if(window.supabase){
+            const { data: sess } = await window.supabase.auth.getSession();
+            if(sess?.session){ headers = { ...headers, Authorization: 'Bearer '+sess.session.access_token }; }
+          }
+        }catch{}
+        const body = {
+          messages: [ { role:'user', content: text } ],
+          temperature: window?.AI_BEHAVIOR?.temperature,
+          max_tokens: window?.AI_BEHAVIOR?.maxTokens,
+          systemPrompt: window?.AI_BEHAVIOR?.systemPrompt,
+        };
+        const res = await fetch(API_BASE + '/api/chat', { method:'POST', headers, body: JSON.stringify(body) });
+        if(res.ok){
+          const out = await res.json();
+          typing(false);
+          renderMessage(out.content||'Готов помочь.', 'ai');
+          return;
+        } else {
+          typing(false);
+        }
+      }catch{ /* swallow, fallback below */ }
+
+      // 2) Fallback to local WebLLM if available (still free, but requires WebGPU)
+      if ('gpu' in navigator) {
+        try {
+          if (!window.webllm) await import('./webllm-init.js');
+          if (window.webllm) {
+            typing(false);
+            const live = document.createElement('div');
+            live.className = 'msg ai';
+            live.textContent = 'Загрузка модели…';
+            chatBody.appendChild(live);
+            chatBody.scrollTop = chatBody.scrollHeight;
+            await window.webllm.ensureEngine((p)=>{
+              const pct = (p?.progress!=null) ? Math.round(p.progress*100) : null;
+              const txt = p?.text ? ` ${p.text}` : '';
+              live.textContent = `Загрузка модели…${pct!=null? ' '+pct+'%':''}${txt}`;
+              chatBody.scrollTop = chatBody.scrollHeight;
+            });
+            setSub();
+            live.textContent = '';
+            const sys = window?.AI_BEHAVIOR?.systemPrompt || 'You are OniAI, a helpful AI assistant.';
+            const messages = [ { role:'system', content: sys }, { role:'user', content: text } ];
+            const full = await window.webllm.complete(messages, (delta)=>{
+              live.textContent += delta;
+              chatBody.scrollTop = chatBody.scrollHeight;
+            }, { temperature: window?.AI_BEHAVIOR?.temperature, maxTokens: window?.AI_BEHAVIOR?.maxTokens });
+            await addMessageToActive(full, 'ai');
+            return;
+          }
+        } catch { /* continue to stub */ }
+      }
+
+      // 3) Final fallback: local stub
       typing(true);
-      setTimeout(()=>{
-        typing(false);
-        renderMessage(fakeAIResponse(text)||'Готов помочь.', 'ai');
-      }, 600 + Math.min(1200, text.length*15));
+      setTimeout(()=>{ typing(false); renderMessage(fakeAIResponse(text)||'Готов помочь.', 'ai'); }, 600 + Math.min(1200, text.length*15));
     }
 
     function openChatWith(seed){

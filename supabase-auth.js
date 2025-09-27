@@ -4,6 +4,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
 const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Expose for non-module scripts
+window.supabase = supabase;
+
+export async function getAccessToken() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token || null;
+  } catch { return null; }
+}
+window.getAccessToken = getAccessToken;
 
 // Wire up Google OAuth button if present
 const googleBtn = document.getElementById('oauthGoogle');

@@ -16,3 +16,8 @@ services:
     buildCommand: npm install
     startCommand: npm start
     autoDeploy: true
+    envVars:
+      - key: GROQ_API_KEY
+        value: ""
+      - key: GROQ_MODEL
+        value: "llama-3.3-70b-versatile"
