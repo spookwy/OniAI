@@ -201,8 +201,7 @@
     try{ nameRef = window.userName || 'Guest'; }catch{ nameRef='Guest'; }
 
     function setSub(){
-      const webllmOn = (typeof navigator !== 'undefined' && 'gpu' in navigator) && !!window.webllm;
-      chatSub.textContent = `You: ${nameRef} • AI: OniAI${webllmOn? ' (WebLLM)':''}`;
+      chatSub.textContent = `You: ${nameRef} • AI: OniAI (Groq)`;
     }
     setSub();
 
@@ -419,36 +418,7 @@
         }
       }catch{ /* swallow, fallback below */ }
 
-      // 2) Fallback to local WebLLM if available (still free, but requires WebGPU)
-      if ('gpu' in navigator) {
-        try {
-          if (!window.webllm) await import('./webllm-init.js');
-          if (window.webllm) {
-            typing(false);
-            const live = document.createElement('div');
-            live.className = 'msg ai';
-            live.textContent = 'Загрузка модели…';
-            chatBody.appendChild(live);
-            chatBody.scrollTop = chatBody.scrollHeight;
-            await window.webllm.ensureEngine((p)=>{
-              const pct = (p?.progress!=null) ? Math.round(p.progress*100) : null;
-              const txt = p?.text ? ` ${p.text}` : '';
-              live.textContent = `Загрузка модели…${pct!=null? ' '+pct+'%':''}${txt}`;
-              chatBody.scrollTop = chatBody.scrollHeight;
-            });
-            setSub();
-            live.textContent = '';
-            const sys = window?.AI_BEHAVIOR?.systemPrompt || 'You are OniAI, a helpful AI assistant.';
-            const messages = [ { role:'system', content: sys }, ...buildModelHistory(16) ];
-            const full = await window.webllm.complete(messages, (delta)=>{
-              live.textContent += delta;
-              chatBody.scrollTop = chatBody.scrollHeight;
-            }, { temperature: window?.AI_BEHAVIOR?.temperature, maxTokens: window?.AI_BEHAVIOR?.maxTokens });
-            await addMessageToActive(full, 'ai');
-            return;
-          }
-        } catch { /* continue to stub */ }
-      }
+      // 2) No WebLLM fallback anymore
 
       // 3) Final fallback: local stub
       typing(true);
