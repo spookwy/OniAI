@@ -17,6 +17,9 @@ window.AI_BEHAVIOR = {
     'Главное — звучать так, будто реально ставишь собеседника на место, а не просто повторяешь заготовки.'
   ].join(' '),
 
+  // WebLLM model ID (see model catalog in MLC/WebLLM repos). Leave undefined to use default.
+  model: undefined,
+
   // Generation settings
   temperature: 0.7,
   maxTokens: 768,
